@@ -336,6 +336,12 @@ namespace Lihtarovich.ReliableUdp.Core
                                          ReliableUdpStateTools.CreateUdpPayload(connectionRecord, header));
         connectionRecord.SndNext++;
       }
+      //RU: на случай большого окна передачи, перезапускаем таймер после отправки
+      connectionRecord.WaitForPacketsTimer.Change( connectionRecord.ShortTimerPeriod, -1 );
+      if ( connectionRecord.CloseWaitTimer != null )
+      {
+        connectionRecord.CloseWaitTimer.Change( -1, -1 );
+      }
     }
 
     /// <summary>
@@ -788,7 +794,7 @@ namespace Lihtarovich.ReliableUdp.Core
           //EN: in this case we have lost acknowledge packet
           //RU: это случай, когда ack на блок пакетов был потерян
         else
-        {
+        { 
           if (!connectionRecord.TimerSecondTry)
           {
             ReliableUdpStateTools.SendAcknowledgePacket(connectionRecord);
