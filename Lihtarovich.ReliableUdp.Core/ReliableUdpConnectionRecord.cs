@@ -143,6 +143,11 @@ namespace Lihtarovich.ReliableUdp.Core
     public int IsDone;
 
     /// <summary>
+    /// Cancellation Token
+    /// </summary>
+    public CancellationToken CToken;
+
+    /// <summary>
     /// <see cref="AsyncResultSendMessage"/>
     /// </summary>
     public readonly AsyncResultSendMessage AsyncResult;
@@ -203,6 +208,7 @@ namespace Lihtarovich.ReliableUdp.Core
                                        ReliableUdpMessageTypes reliableUdpMessageType)
       : this(key, tcb)
     {
+      CToken = CancellationToken.None;
       this.ReliableUdpMessageType = reliableUdpMessageType;
       //set initial state
       State = Tcb.States.FirstPacketReceived;
@@ -215,10 +221,11 @@ namespace Lihtarovich.ReliableUdp.Core
     /// <param name="key">EndPoint and TransmissionId key</param>
     /// <param name="tcb">Connection control block. <see cref="ReliableUdpConnectionControlBlock"/></param>
     /// <param name="reliableUdpMessage"><see cref="ReliableUdpMessage"/> message to send.</param>
+    /// <param name="cToken">CancellationToken</param>
     /// <param name="asyncResult"><see cref="AsyncResultSendMessage"/></param>
     /// <exception cref="ArgumentNullException"><paramref name="key"/> or <paramref name="tcb"/> is a null reference</exception>
     public ReliableUdpConnectionRecord(Tuple<EndPoint, Int32> key, ReliableUdpConnectionControlBlock tcb,
-                                       ReliableUdpMessage reliableUdpMessage, AsyncResultSendMessage asyncResult)
+                                       ReliableUdpMessage reliableUdpMessage, CancellationToken cToken, AsyncResultSendMessage asyncResult)
       : this(key, tcb)
     {
       if (reliableUdpMessage == null)
@@ -229,6 +236,7 @@ namespace Lihtarovich.ReliableUdp.Core
       {
         throw new ArgumentNullException("reliableUdpMessage", "reliableUdpMessage.Body can not be null.");
       }
+      CToken = cToken;
       this.AsyncResult = asyncResult;
       this.ReliableUdpMessageType = reliableUdpMessage.Type;
       this.IsNoAnswerNeeded = reliableUdpMessage.NoAsk;

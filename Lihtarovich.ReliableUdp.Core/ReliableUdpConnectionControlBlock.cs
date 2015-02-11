@@ -11,6 +11,7 @@ using System.Threading;
 using System.Net.Sockets;
 using System.Net;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 
 namespace Lihtarovich.ReliableUdp.Core
@@ -523,7 +524,7 @@ namespace Lihtarovich.ReliableUdp.Core
     public void SendMessage(ReliableUdpMessage reliableUdpMessage,
                             IPEndPoint remoteEndPoint)
     {
-      StartTransmission(reliableUdpMessage, remoteEndPoint, null);
+      StartTransmission(reliableUdpMessage, remoteEndPoint,CancellationToken.None, null);
     }
 
     /// <summary>
@@ -539,10 +540,26 @@ namespace Lihtarovich.ReliableUdp.Core
     {
       //RU: упаковали данные в собственный AsyncResult
       //EN: wrapped data in our own AsyncResult
-      AsyncResultSendMessage ar = new AsyncResultSendMessage(reliableUdpMessage, remoteEndPoint, callback, state, this);
+      AsyncResultSendMessage ar = new AsyncResultSendMessage(reliableUdpMessage, remoteEndPoint,CancellationToken.None, callback, state, this);
 
       ThreadPool.QueueUserWorkItem(StartTransmissionHelper, ar);
       return ar;
+    }
+
+    private IAsyncResult BeginSendTask(WrappedBeginSendParameters obj, AsyncCallback callback, Object state)
+    {
+      //RU: упаковали данные в собственный AsyncResult
+      //EN: wrapped data in our own AsyncResult
+      AsyncResultSendMessage ar = new AsyncResultSendMessage( obj.ReliableUdpMessage, obj.RemoteEndPoint,obj.Token, callback, state, this );
+      ThreadPool.QueueUserWorkItem( StartTransmissionHelper, ar );
+      return ar;
+    }
+
+    public Task<bool> SendMessageAsync(ReliableUdpMessage reliableUdpMessage, IPEndPoint remoteEndPoint, CancellationToken cToken)
+    {
+      TaskFactory<bool> taskFactory = new TaskFactory<bool>(cToken);
+      return taskFactory.FromAsync(BeginSendTask, EndSend, new WrappedBeginSendParameters(reliableUdpMessage, remoteEndPoint, cToken),
+                                   null);
     }
 
     /// <summary>
@@ -574,7 +591,7 @@ namespace Lihtarovich.ReliableUdp.Core
     private void StartTransmissionHelper(Object asyncResult)
     {
       AsyncResultSendMessage ar = (AsyncResultSendMessage) asyncResult;
-      StartTransmission(ar.ReliableUdpMessage, ar.EndPoint, ar);
+      StartTransmission(ar.ReliableUdpMessage, ar.EndPoint, ar.Token, ar);
     }
 
     /// <summary>
@@ -588,7 +605,7 @@ namespace Lihtarovich.ReliableUdp.Core
     /// <exception cref="ArgumentException"></exception>
     /// <exception cref="ReliableUdpConfigurationException"></exception>
     /// <returns></returns>
-    private void StartTransmission(ReliableUdpMessage reliableUdpMessage, EndPoint endPoint,
+    private void StartTransmission(ReliableUdpMessage reliableUdpMessage, EndPoint endPoint, CancellationToken cToken,
                                    AsyncResultSendMessage asyncResult)
     {
       try
@@ -612,11 +629,11 @@ namespace Lihtarovich.ReliableUdp.Core
         Tuple<EndPoint, Int32> key = new Tuple<EndPoint, Int32>(endPoint, BitConverter.ToInt32(transmissionId, 0));
         Debug.WriteLine("Transmission Id is {0}", key.Item2);
         //EN: make two attemps to add key into dictionary
-        if (!m_listOfHandlers.TryAdd(key, new ReliableUdpConnectionRecord(key, this, reliableUdpMessage, asyncResult)))
+        if (!m_listOfHandlers.TryAdd(key, new ReliableUdpConnectionRecord(key, this, reliableUdpMessage, cToken, asyncResult)))
         {
           m_randomCrypto.GetBytes(transmissionId);
           key = new Tuple<EndPoint, Int32>(endPoint, BitConverter.ToInt32(transmissionId, 0));
-          if (!m_listOfHandlers.TryAdd(key, new ReliableUdpConnectionRecord(key, this, reliableUdpMessage, asyncResult)))
+          if (!m_listOfHandlers.TryAdd(key, new ReliableUdpConnectionRecord(key, this, reliableUdpMessage,cToken, asyncResult)))
             throw new ArgumentException("Pair TransmissionId & EndPoint is already exists in the dictionary");
         }
         //RU: запустили состояние в обработку. 
@@ -773,6 +790,23 @@ namespace Lihtarovich.ReliableUdp.Core
         yield return Completed;
         yield return FirstPacketSending;
         yield return SendingCycle;
+      }
+    }
+
+    /// <summary>
+    /// WrappedBeginSendParameters for wrapping APM in Task
+    /// </summary>
+    public class WrappedBeginSendParameters
+    {
+      public ReliableUdpMessage ReliableUdpMessage;
+      public IPEndPoint RemoteEndPoint;
+      public CancellationToken Token;
+
+      public WrappedBeginSendParameters( ReliableUdpMessage reliableUdpMessage, IPEndPoint remoteEndPoint, CancellationToken cToken )
+      {
+        ReliableUdpMessage = reliableUdpMessage;
+        RemoteEndPoint = remoteEndPoint;
+        Token = cToken;
       }
     }
     #endregion

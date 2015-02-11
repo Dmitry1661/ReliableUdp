@@ -136,6 +136,7 @@ namespace Lihtarovich.ReliableUdp.Core
           //EN: current TransmissionId will be droped
           do
           {
+            connectionRecord.CToken.ThrowIfCancellationRequested();
             ReliableUdpStateTools.SendPacket(connectionRecord,
                                              ReliableUdpStateTools.CreateUdpPayload(connectionRecord,
                                                                                     ReliableUdpStateTools.
@@ -150,6 +151,7 @@ namespace Lihtarovich.ReliableUdp.Core
 
         #endregion
 
+        connectionRecord.CToken.ThrowIfCancellationRequested();
         ReliableUdpHeader header = ReliableUdpStateTools.CreateReliableUdpHeader(connectionRecord);
         ReliableUdpStateTools.SendPacket(connectionRecord,
                                          ReliableUdpStateTools.CreateUdpPayload(connectionRecord, header));
@@ -190,6 +192,10 @@ namespace Lihtarovich.ReliableUdp.Core
       {
         SetAsError(connectionRecord, ex);
       }
+      catch( OperationCanceledException ex)
+      {
+        SetAsError(connectionRecord, ex);
+      }
       finally
       {
         System.Threading.Monitor.Exit(connectionRecord.LockerReceive);
@@ -225,6 +231,9 @@ namespace Lihtarovich.ReliableUdp.Core
         //EN: When we send acknowledge we set the next expected packet number
         //EN: When we send request for lost packet we set concrete packet number of lost packet
         System.Threading.Monitor.Enter(connectionRecord.LockerReceive);
+
+        //EN: if cancellation requested - stop and release resources
+        connectionRecord.CToken.ThrowIfCancellationRequested();
 
         if (connectionRecord.IsDone != 0)
           return;
@@ -314,6 +323,10 @@ namespace Lihtarovich.ReliableUdp.Core
       catch (System.Net.Sockets.SocketException ex)
       {
         SetAsError(connectionRecord, ex);
+      }
+      catch(OperationCanceledException ex)
+      {
+        SetAsError( connectionRecord, ex );
       }
       finally
       {

@@ -16,25 +16,17 @@ namespace Lihtarovich.ReliableUdp.Core
   /// </summary>
   internal class AsyncResultSendMessage : AsyncResult<Boolean>
   {
-    private readonly ReliableUdpMessage m_reliableUdpMessage;
-
     /// <summary>
     /// Gets <see cref="ReliableUdpMessage"/>
     /// </summary>
-    public ReliableUdpMessage ReliableUdpMessage
-    {
-      get { return m_reliableUdpMessage; }
-    }
-
-    private readonly EndPoint m_remoteEndPoint;
+    public ReliableUdpMessage ReliableUdpMessage { get; private set; }
 
     /// <summary>
     /// Gets remote endpoint
     /// </summary>
-    public EndPoint EndPoint
-    {
-      get { return m_remoteEndPoint; }
-    }
+    public EndPoint EndPoint { get; private set; }
+
+    public CancellationToken Token { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the AsyncResultSendMessage 
@@ -44,12 +36,13 @@ namespace Lihtarovich.ReliableUdp.Core
     /// <param name="asyncCallback">asyncCallback method</param>
     /// <param name="state">An object that contains state information for this request</param>
     /// <param name="owner">Object who calls the BeginSend method (instance of <see cref="ReliableUdpConnectionControlBlock"/>)</param>
-    public AsyncResultSendMessage(ReliableUdpMessage reliableUdpMessage, EndPoint endPoint,
+    public AsyncResultSendMessage(ReliableUdpMessage reliableUdpMessage, EndPoint endPoint, CancellationToken cToken,
                                   AsyncCallback asyncCallback, object state, object owner)
       : base(asyncCallback, state, owner)
     {
-      m_reliableUdpMessage = reliableUdpMessage;
-      m_remoteEndPoint = endPoint;
+      ReliableUdpMessage = reliableUdpMessage;
+      EndPoint = endPoint;
+      Token = cToken;
     }
   }
 

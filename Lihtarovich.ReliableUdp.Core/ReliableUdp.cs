@@ -6,6 +6,8 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Lihtarovich.ReliableUdp.Core
 {
@@ -189,6 +191,48 @@ namespace Lihtarovich.ReliableUdp.Core
                                          AsyncCallback asyncCallback, Object state)
     {
       return m_tcb.BeginSend(reliableUdpMessage, remoteEndPoint, asyncCallback, state);
+    }
+
+    /// <summary>
+    /// Sends message async (can be used with .net 4 framework)
+    /// </summary>
+    /// <param name="reliableUdpMessage"><see cref="ReliableUdpMessage"/> message to send.</param>
+    /// <param name="remoteEndPoint">Ip endpoint of recipient of the message.</param>
+    /// <param name="cToken">Cancellation Token</param>
+    /// <returns><c>true</c> if the message was successfully sent. 
+    /// <c>false</c> if sending the message was interrupted on a timeout.</returns>
+    /// <exception cref="AggregateException">Contains one or more errors that occur during application execution.</exception>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="ReliableUdpConfigurationException"></exception>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="SocketException"></exception>
+    /// <exception cref="OperationCanceledException">throws if sending cancelled</exception>
+    public Task<bool> SendMessageAsync(ReliableUdpMessage reliableUdpMessage, IPEndPoint remoteEndPoint, CancellationToken cToken)
+    {
+      return m_tcb.SendMessageAsync(reliableUdpMessage, remoteEndPoint, cToken);
+    }
+
+    /// <summary>
+    /// Sends message async (can be used with .net 4 framework)
+    /// </summary>
+    /// <param name="reliableUdpMessage"><see cref="ReliableUdpMessage"/> message to send.</param>
+    /// <param name="remoteEndPoint">Ip endpoint of recipient of the message.</param>
+    /// <returns><c>true</c> if the message was successfully sent. 
+    /// <c>false</c> if sending the message was interrupted on a timeout.</returns>
+    /// <exception cref="AggregateException">Contains one or more errors that occur during application execution.</exception>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="ReliableUdpConfigurationException"></exception>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="SocketException"></exception>
+    public Task<bool> SendMessageAsync( ReliableUdpMessage reliableUdpMessage, IPEndPoint remoteEndPoint )
+    {
+      return m_tcb.SendMessageAsync( reliableUdpMessage, remoteEndPoint, CancellationToken.None );
     }
 
     /// <summary>
